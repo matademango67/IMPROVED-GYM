@@ -44,7 +44,7 @@ export class gym_membership {
 
 
  static async changeStatus_membership (req,res){
-   const user_id = req.params.id || req.body.user_id;
+ const user_id =   req.params.id ?? req.body?.user_id ?? req.user.id
 
 try {
   const result = await Membership_model.changeStatus_membership(user_id);
@@ -67,9 +67,19 @@ try {
    const user_id = req.body.user_id
 
    try {
+
     const result = await Membership_model.changeType_membership(user_id)
     res.status(200).json(result)
+
    } catch (error){
+     if (error.message === "Membership not found") {
+    return res.status(404).json({ message: error.message });
+  }
+
+  if (error.message === "You can't change your membership's type due to your current status") {
+    return res.status(400).json({ message: error.message });
+  }
+
   return res.status(500).json({
         error: error.message
     })

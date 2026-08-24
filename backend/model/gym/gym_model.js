@@ -14,10 +14,10 @@ export class gym_model {
     };
 
     static async getAllCustomers() {
-        const result = await pool.query(`SELECT * FROM customers`);
+        const result = await pool.query(`SELECT * FROM customers ORDER BY id`);
          const rows = result.rows;
         if(rows.length === 0){
-            throw new Error("error")
+            throw new Error("Customers not found")
         } else{
              return rows;
         }

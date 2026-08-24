@@ -84,7 +84,6 @@ return result.rows;
         RETURNING *;
     `;
 try {
-  console.log(user_id)
   
     const result = await pool.query(query, [type, customer_id]);
 
@@ -129,7 +128,7 @@ try {
   const status = membershipResult.rows[0].status;
 
   if (status !== 'active' && status !== 'paused') {
-    throw new Error("You can't change your membership's status due to your current status");
+    throw new Error("You can't change your membership's status due to your current membership status");
   }
 
   const result = await pool.query(
@@ -168,7 +167,7 @@ WHERE customer_id = $1`,
         if (status !== 'active') {
     throw new Error("You can't change your membership's type due to your current status");
   }
-      const result = await pool.query(
+      await pool.query(
         `UPDATE memberships m
         SET 
         type = CASE
@@ -184,6 +183,10 @@ WHERE customer_id = $1`,
  AND c.user_id = $1
  RETURNING *;`, [user_id]
       )
+
+      const result = "membership's type changed successfully"
+
+      return(result)
  }
 
 }

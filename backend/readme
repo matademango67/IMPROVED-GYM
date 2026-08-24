@@ -1,14 +1,20 @@
 add tests for the  routes (after learning them more deeply)
 i have to put all the refresh tokens in http only later
 
-y ver si  las memberships expiran bien
-
-
-
 
  Futuro 
  hacer ruta para editar  el user
-en el inicio que sea con el nombre en vez del email 
+en el inicio que sea con el nombre en vez del email donde dice bienvenido
 
 
 cambie la database para hacer el integration tests
+
+work on logic behind the memnership
+optimizar la authorizacion ?
+
+
+
+check the payment integration test later + fix  rror: update or delete on table "memberships" violates foreign key constraint "payments_memberships_id_fkey" on table "payments"
+ chnage customera to customer
+add the user integration later in both
+chech membershipa i have to fix a request in get memberships when i change to my real database

@@ -1,7 +1,7 @@
 import request from 'supertest';
-import {pool} from '../../db/gym.js';
+import {pool} from '../../../db/gym.js';
 import {test, expect, describe } from "@jest/globals";
-import app from '../../app';
+import app from '../../../app.js';
 import jwt from "jsonwebtoken";
 import {randomUUID} from 'node:crypto'
 

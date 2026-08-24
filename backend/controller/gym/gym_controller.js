@@ -21,6 +21,9 @@ export class gym_controller {
             const customers = await gym_model.getAllCustomers();
            return  res.status(200).json(customers);
         } catch (error) {
+            if(error.message === "Customers not found"){
+                return res.status(404).json({ error : error.message})
+            }
            return res.status(500).json({ error: error.message });
         }
     }

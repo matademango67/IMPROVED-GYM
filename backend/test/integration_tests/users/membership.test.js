@@ -1,16 +1,14 @@
 import {test, expect, describe , beforeEach, afterEach } from "@jest/globals";
 
 import request from 'supertest';
-import {pool} from '../../db/gym.js';
+import {pool} from '../../../db/gym.js';
 
-import app from '../../app';
-import jwt from "jsonwebtoken";
-import {createTestToken} from "../helpers/auth_helper.js"
+import app from '../../../app.js';
+import {createTestToken} from "../../helpers/auth_helper.js"
+import { createTestUser , createTestCustomer , createTestMembership } from "../../helpers/db_helper.js";
 import {randomUUID} from 'node:crypto'
 
-describe('GET /membership/me' , () => {
-
-    describe("authorization" , () => {
+describe("authorization" , () => {
            test('Get membership/me - no token > 401' , async () => {
        const response = await request(app)
        .get('/membership/me');
@@ -35,6 +33,8 @@ describe('GET /membership/me' , () => {
     });
     });
 
+describe('GET /membership/me' , () => {
+
    describe("with membership" , () => {
          let testUser;
     let testCustomer;
@@ -42,53 +42,11 @@ describe('GET /membership/me' , () => {
 
    beforeEach(async () => {
 
-    const userResult = await pool.query(`
-        INSERT INTO users (
-            role,
-            email,
-            password_hash
-        )
-        VALUES ($1, $2, $3)
-        RETURNING *
-    `, [
-        "customer",
-        `membership-${randomUUID()}@test.com`,
-        "fake-password"
-    ]);
+    testUser = await createTestUser()
 
-    testUser = userResult.rows[0];
+   testCustomer = await createTestCustomer(testUser)
 
-    const customerResult = await pool.query(`
-        INSERT INTO customers (
-            name,
-            birth,
-            email,
-            user_id
-        )
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-    `, [
-        "Integration Test",
-        "2000-01-01",
-        `${randomUUID()}@test.com`,
-        testUser.id
-    ]);
-
-     testCustomer = customerResult.rows[0];
-
-    const membershipResult = await pool.query(`INSERT INTO memberships (
-        type,
-        cost,
-        customer_id
-        )
-        VALUES ($1 , $2 , $3)
-        RETURNING *`, [
-            "normal",
-            "1500",
-            testCustomer.id
-        ]);
-
-       testMembership = membershipResult.rows[0];
+   testMembership = await createTestMembership(testCustomer)
 }); 
 
 afterEach(async () => {
@@ -101,13 +59,7 @@ afterEach(async () => {
 });
  
     test('Get membership/me - found membership > 200' , async () => {
-         const token = jwt.sign(
-                {
-                    id: testUser.id,
-                    role: testUser.role
-                },
-                process.env.ACCESS_TOKEN_SECRET
-            );
+        const token = await createTestToken(testUser)
 
             const response = await request(app)
                 .get("/membership/me")
@@ -135,37 +87,7 @@ afterEach(async () => {
 
         beforeEach(async () => {
 
-            const userResult = await pool.query(`
-                INSERT INTO users (
-                    role,
-                    email,
-                    password_hash
-                )
-                VALUES ($1, $2, $3)
-                RETURNING *
-            `, [
-                "customer",
-                `no-membership-${randomUUID()}@test.com`,
-                "fake-password"
-            ]);
-
-            testUser = userResult.rows[0];
-
-
-            await pool.query(`
-                INSERT INTO customers (
-                    name,
-                    birth,
-                    email,
-                    user_id
-                )
-                VALUES ($1, $2, $3, $4)
-            `, [
-                "No Membership",
-                "2000-01-01",
-                `no-membership-customer-${randomUUID()}@test.com`,
-                testUser.id
-            ]);
+         testUser = await createTestUser()
 
         });
 
@@ -180,12 +102,7 @@ afterEach(async () => {
         });
 
         test("no membership > 404" , async () => {
-            const token = jwt.sign({
-                id : testUser.id ,
-                role : "customer"
-            },
-        process.env.ACCESS_TOKEN_SECRET
-    )
+           const token = await createTestToken(testUser)
       
          const response = await request(app)
           .get("/membership/me")
@@ -208,40 +125,8 @@ describe('POST /membership/' , () => {
 
     beforeEach(async () => {
 
-        const userResult = await pool.query(`
-            INSERT INTO users (
-                role,
-                email,
-                password_hash
-            )
-            VALUES ($1, $2, $3)
-            RETURNING *
-        `, [
-            "customer",
-            `membership-post-${randomUUID()}@test.com`,
-            "fake-password"
-        ]);
-
-        testUser = userResult.rows[0];
-
-
-        const customerResult = await pool.query(`
-            INSERT INTO customers (
-                name,
-                birth,
-                email,
-                user_id
-            )
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-        `, [
-            "Membership Test",
-            "2000-01-01",
-            `customer-${randomUUID()}@test.com`,
-            testUser.id
-        ]);
-
-        testCustomer = customerResult.rows[0];
+     testUser = await createTestUser()
+     testCustomer = await createTestCustomer(testUser)
 
     });
 
@@ -256,12 +141,7 @@ describe('POST /membership/' , () => {
     });
 
     test('POST /membership create a membership > 201' , async () =>{
-        const token = jwt.sign({
-            id : testUser.id ,
-            role : "customer"
-        },
-          process.env.ACCESS_TOKEN_SECRET
-       )
+       const token = await createTestToken(testUser)
 
        const membershipData = {
            type : "normal"
@@ -294,13 +174,7 @@ describe('POST /membership/' , () => {
 
     test("POST /membership - invalid type > 400", async () => {
 
-    const token = jwt.sign(
-        {
-            id: testUser.id,
-            role: testUser.role
-        },
-        process.env.ACCESS_TOKEN_SECRET
-    );
+ const token = await createTestToken(testUser)
 
     const response = await request(app)
         .post("/membership/")
@@ -318,13 +192,7 @@ describe('POST /membership/' , () => {
 
     test("POST /membership - missing type > 400", async () => {
 
-    const token = jwt.sign(
-        {
-            id: testUser.id,
-            role: testUser.role
-        },
-        process.env.ACCESS_TOKEN_SECRET
-    );
+   const token = await createTestToken(testUser)
 
     const response = await request(app)
         .post("/membership/")
@@ -340,13 +208,7 @@ describe('POST /membership/' , () => {
 
     test("POST /membership - existing membership > 409", async () => {
 
-    const token = jwt.sign(
-        {
-            id: testUser.id,
-            role: testUser.role
-        },
-        process.env.ACCESS_TOKEN_SECRET
-    );
+    const token = await createTestToken(testUser)
 
     const firstResponse = await request(app)
         .post("/membership/")
@@ -405,13 +267,7 @@ describe('POST /membership/' , () => {
 
     test("POST /membership - no customer > 404", async () => {
 
-    const token = jwt.sign(
-        {
-            id: testUser.id,
-            role: testUser.role
-        },
-        process.env.ACCESS_TOKEN_SECRET
-    );
+  const token = await createTestToken(testUser)
 
     const response = await request(app)
     .post('/membership/')
@@ -430,9 +286,157 @@ describe('POST /membership/' , () => {
 })
 })
 
-describe('PACTH /membership/' , () => {
+describe('PATCH /membership/status' , () => {
+
+    let testUser;
+    let testCustomer;
+    let testMembership;
+
+    beforeEach(async () => {
+        testUser = await createTestUser()
+        testCustomer = await createTestCustomer(testUser)
+        testMembership = await createTestMembership(testCustomer)
+    });
+
+    afterEach(async () => {
+
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testUser.id]
+        );
+
+    });
+
+    test('patch /membership/status - change the membership status from active to paused> 200' , async () => {
+     const token = createTestToken(testUser)
+
+         const response = await request(app)
+         .patch('/membership/status')
+         .set("Authorization" , `Bearer ${token}`)
+
+         expect(response.statusCode).toBe(200)
+         expect(response.body).toEqual({
+            message: "Membership's status changed successfully"
+         })
+
+         const result = await pool.query(`
+            SELECT status
+            FROM memberships
+            WHERE customer_id = $1
+        `, [testCustomer.id]);
+
+        expect(result.rows[0].status).toBe("paused");
+    })
+
+    test('PATCH /membership/status - paused membership becomes active > 200',async () => {
+
+        await pool.query(`
+            UPDATE memberships
+            SET status = 'paused'
+            WHERE id = $1
+        `, [testMembership.id]);
+
+        const token = createTestToken(testUser);
+
+        const response = await request(app)
+            .patch('/membership/status')
+            .set("Authorization", `Bearer ${token}`)
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.body).toEqual({
+            message: "Membership's status changed successfully"
+        });
+
+        const result = await pool.query(`
+            SELECT status
+            FROM memberships
+            WHERE id = $1
+        `, [testMembership.id]);
+
+        expect(result.rows[0].status).toBe("active");
+    }
+);
+
+    describe('no membership' , () => {
+        let testUser;
+        let testCustomer;
     
+        beforeEach(async () => {
+        testUser = await createTestUser()
+        testCustomer = await createTestCustomer(testUser)
+    });
+
+    afterEach(async () => {
+
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testUser.id]
+        );
+
+    });
+
+     test('patch /membership/status - membership not found > 404' , async () => {
+           const token = createTestToken(testUser)
+
+           const response = await request(app)
+           .patch('/membership/status')
+           .set('authorization' , `Bearer ${token}`)
+
+           expect(response.statusCode).toBe(404)
+           expect(response.body).toEqual({
+                message: "Membership not found"
+            })
+        })
+    })
+
+    describe('cant change status' , () => {
+            let testUser;
+        let testCustomer;
+    
+        beforeEach(async () => {
+        testUser = await createTestUser()
+        testCustomer = await createTestCustomer(testUser)
+
+         await pool.query(`INSERT INTO memberships (
+        type,
+        cost,
+        customer_id,
+        status
+        )
+        VALUES ($1 , $2 , $3 , $4)
+        RETURNING *`, [
+            "normal",
+            "1500",
+            testCustomer.id,
+            "banned"
+        ]);
+    });
+
+    afterEach(async () => {
+
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testUser.id]
+        );
+    })
+
+     test('Patch /membership/status - banned membership > 400' , async () => {
+        const token = createTestToken(testUser)
+
+        const response = await request(app)
+        .patch('/membership/status')
+        .set("Authorization" , `Bearer ${token}`)
+
+         expect(response.statusCode).toBe(400)
+         expect(response.body).toEqual({
+            message: "You can't change your membership's status due to your current membership status"
+         });
+     
+     }) 
+    })
 })
+ // hacerlo
 
 
 //pnpm test /membership.test.js

@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+
 import {auth_model} from "../model/auth_model.js";
-import {token_model} from "../model/token_model.js";
+
 
 const saltrounds = Number(process.env.SALT_ROUNDS.trim())
 
@@ -14,10 +14,7 @@ export class auth_controller {
         if(!user){
             return res.status(404).json({ message : 'User not found'})
         }
-        return res.status(200).json({
-            message: "User retrieved successfully",
-            user: user
-        });
+        return res.status(200).json(user);
     } catch (error) {
         return res.status(500).json({
             message: "Internal server error"
@@ -41,23 +38,20 @@ export class auth_controller {
         const user = await auth_model.registerUser(email, hashedPassword , role);
         res.status(201).json(user);
     } catch (error) {
-        if(error.statusCode === 409) {
+        if(error.message === "User with this email already exists") {
             return res.status(409).json({ message: error.message });
         }
-        console.error(error);
-      return res.status(500).json({ error: error.message });
+        
+      return console.error(error); // res.status(500).json({ error: error.message });
    }
 }
 
     static async login(req,res){
         try {
             const { email, password } = req.body;
-            const hashedPassword = await bcrypt.hash(password, saltrounds);
+            await bcrypt.hash(password, saltrounds);
             const user = await auth_model.login(email, password);
 
-            if(!user) {
-                return res.status(401).json({ message: "Invalid email or password" });
-            }
             res.cookie('refreshToken', user.refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
@@ -67,11 +61,10 @@ export class auth_controller {
             return res.status(200).json({
                 message : "Login successful",
                 accessToken: user.AccessToken,
-                refreshToken: user.refreshToken
             })
         } catch (error) {
-            if(error.statusCode === 401) {
-                return res.status(401).json({
+            if(error.message === 'Invalid password' || error.message === 'User not found' || error.message === "User is inactive or blocked. Please contact support.") {
+                return res.status(400).json({
                     status: "fail",
                     message: error.message
                 })
@@ -173,6 +166,9 @@ export class auth_controller {
     await auth_model.setUserStatus(input)
         res.status(200).json({ message: 'user status updated successfully'})
     } catch (error) {
+        if(error.message === 'user doesnt exist'){
+            return res.status(404).json({ message: 'user doesnt exist'})
+        }
        res.status(500).json({ message: 'error while updating users status'})
     }
   }
@@ -189,7 +185,7 @@ export class auth_controller {
         res.clearCookie("refreshToken");
 
          return res.status(200).json({
-             message: "Account deleted successfully"
+             message: "Account inactivated successfully"
          });
 
      } catch (error){

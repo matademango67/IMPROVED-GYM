@@ -1,7 +1,6 @@
 import {pool} from "../db/gym.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import {role} from "../config/role.js";
 import {token_model} from "./token_model.js";
 import { hashToken , generateRefreshToken} from "../config/refresh_token.js";
 
@@ -36,7 +35,10 @@ export class auth_model {
                 [email, hashedPassword , role]
             );
             return result.rows[0];
-        } catch (error) {        
+        } catch (error) { 
+            if (error.code === '23505') {
+                throw new Error("User with this email already exists");
+            }       
     throw new Error("Error registering user: " + error.message);
         }
     }
@@ -145,22 +147,18 @@ export class auth_model {
 
      static async setUserStatus(input){   //admin route
         const {user_id, status, status_reason} = input
-        const user = await pool.query(
-            `SELECT * FROM users WHERE id = $1`,
-            [user_id])
-            try{
-                if(!user.rows.length){
-              throw new Error('user doesnt exist')
-            }
-            await pool.query(
+          const user = await pool.query(
                 `UPDATE users
                  SET
                 status_reason = $3,
                 status = $2
-                 WHERE id = $1`,[user_id,status, status_reason]
+                 WHERE id = $1
+                 RETURNING id`
+                 ,[user_id,status, status_reason]
               )
-            } catch (error){
-                console.error('Error deleting user:', error)
+
+               if(!user.rows.length){
+              throw new Error('user doesnt exist')
             }
      }
 
@@ -176,7 +174,7 @@ export class auth_model {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error deleting user:', error);
+        console.error('Error inactivating the user:', error);
         throw error;
     }
 }

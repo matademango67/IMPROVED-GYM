@@ -60,11 +60,13 @@ export async function createTestMembership(testCustomer){
 }
 
 export async function createTestPayment(testmembership){
-     const payment = await pool.query(`INSERT INTO PAYMENTS (
+     const paymentResult = await pool.query(`INSERT INTO PAYMENTS (
                  memberships_id,
                   amount)
                   VALUES ($1 , $2)
                   RETURNING *` ,
                 [testmembership.id , 1500])
+
+    return paymentResult.rows[0]
     
 }

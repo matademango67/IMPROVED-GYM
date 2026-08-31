@@ -7,6 +7,7 @@ import app from '../../../app.js';
 import {createTestToken , testAdminAuthorization} from "../../helpers/auth_helper.js"
 import { createTestUser } from "../../helpers/db_helper.js";
 import {randomUUID} from 'node:crypto'
+import bcrypt from "bcrypt";
 
 describe('GET /admin/ - Authorization' ,  () => {
     testAdminAuthorization('get','/admin/')
@@ -22,6 +23,10 @@ describe('POST /admin/register/employee - Authorization' ,  () => {
 
 describe('PATCH /admin/setUserStatus - Authorization' ,  () => {
     testAdminAuthorization('patch','/admin/setUserStatus')
+});
+
+describe('PATCH /admin/Update - Authorization' ,  () => {
+    testAdminAuthorization('patch','/admin/Update')
 });
 
 describe('GET /admin/' , () => {
@@ -60,9 +65,15 @@ describe('GET /admin/' , () => {
 
 describe('POST /admin/register' , () => {
     let testAdmin;
+    let existingUser;
 
     beforeEach(async () => {
         testAdmin = await createTestUser({role: 'admin'})
+
+        existingUser = await createTestUser({
+        email: 'existing11@gmail.com'
+    });
+
     })
 
     afterEach(async() => {
@@ -75,10 +86,15 @@ describe('POST /admin/register' , () => {
             "DELETE FROM users WHERE email = $1",
             ['josejosela1@gmail.com']
         );
+
+           await pool.query(
+        "DELETE FROM users WHERE id = $1",
+        [existingUser.id]
+    );
     })
 
     test('POST /admin/register - invalid email > 400', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .post('/admin/register')
@@ -97,7 +113,7 @@ describe('POST /admin/register' , () => {
     });
 
      test('POST /admin/register - invalid password > 400', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .post('/admin/register')
@@ -116,21 +132,13 @@ describe('POST /admin/register' , () => {
     });
 
     test('POST /admin/register - user with existing email > 409', async () => {
-        const existingUser = await createTestUser({
-        email: 'existing10@gmail.com'
-    });
-
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .post('/admin/register')
         .set("Authorization" , `Bearer ${token}`)
         .send({ email: existingUser.email, password: 'password123'});
 
-          await pool.query(
-        "DELETE FROM users WHERE id = $1",
-        [existingUser.id]
-    );
     
         expect(response.statusCode).toBe(409);
         expect(response.body).toEqual({ message: 'User with this email already exists' });
@@ -140,7 +148,7 @@ describe('POST /admin/register' , () => {
     });
 
     test('POST /admin/register - creates and return an admin > 201', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .post('/admin/register')
@@ -149,21 +157,13 @@ describe('POST /admin/register' , () => {
       
         const result = await pool.query(
             'SELECT * FROM users WHERE email = $1',
-            ['josejosela2@gmail.com']
+            ['josejosela1@gmail.com']
         );
 
-       
         expect(response.statusCode).toBe(201);
-      //  expect(response.body).toEqual(result.rows[0]);
-      //  expect(result.rows.length).toBe(1);
-      //  expect(result.rows[0].role).toBe('admin');
-
-          await pool.query(
-            "DELETE FROM users WHERE email = $1",
-            ['josejosela2@gmail.com']
-        );
-
-   
+        expect(response.body).toEqual(result.rows[0]);
+        expect(result.rows.length).toBe(1);
+        expect(result.rows[0].role).toBe('admin');
     });
 });
 
@@ -231,7 +231,7 @@ describe('PATCH /admin/setUserStatus' , () => {
     })
 
     test('PATCH /admin/setUserStatus - changes the user status > 200', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .patch('/admin/setUserStatus')
@@ -290,14 +290,82 @@ describe('PATCH /admin/setUserStatus' , () => {
     });
 });
 
+describe('PATCH /admin/Update' ,  () => {
+    let testUser;
+    let testAdmin;
 
-
- 
-
+    beforeEach( async () => {
+      testUser = await createTestUser()
+      testAdmin = await createTestUser({role : 'admin'})
+    }) 
     
+    afterEach(async() => {
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testUser.id]
+        );
 
-//const expected = JSON.parse(JSON.stringify(result.rows));
-//expect(response.body).toEqual(expected);
+         await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testAdmin.id]
+        );
+    })
+
+    test('PATCH /auth/Update - it updates the user password > 200' , async () => {
+        const token = createTestToken(testAdmin)
+        const updated_password =  "updated password"
+        const data = {email : testUser.email ,  new_password : updated_password }
+
+        const response = await request(app)
+        .patch('/admin/Update')
+        .set("Authorization" , `Bearer ${token}`)
+        .send(data);
+
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [testUser.email])
+
+        const passwordMatches = await bcrypt.compare(
+          updated_password,
+          result.rows[0].password_hash
+          );
+
+        expect(response.statusCode).toBe(200)
+        expect(response.body.status).toBe('success')
+        expect(response.body.user.email).toBe(testUser.email)
+        expect(passwordMatches).toBe(true);
+        
+
+    })
+
+    test('PATCH /auth/Update - new and old passwords are the same > 400' , async () => {
+        const token = createTestToken(testAdmin)
+        const data = {email : testUser.email ,  new_password : "fake-password" }
+
+        const response = await request(app)
+        .patch('/admin/Update')
+        .set("Authorization" , `Bearer ${token}`)
+        .send(data);
+
+        expect(response.statusCode).toBe(400)
+        expect(response.body).toEqual({ message: 'cant change the same password'});
+
+    })
+
+        test('PATCH /auth/Update - no user > 400' , async () => {
+        const token = createTestToken(testAdmin)
+        const updated_password =  "updated password"
+        const data = {email : 'noexisto@gmail.com' ,  new_password : updated_password }
+
+        const response = await request(app)
+        .patch('/admin/Update')
+        .set("Authorization" , `Bearer ${token}`)
+        .send(data);
+
+        expect(response.statusCode).toBe(400)
+        expect(response.body).toEqual({ message: 'User not found'});
+        
+
+    })
+})
 
 
-    //pnpm test /autha.test.js
+//pnpm test /autha.test.js

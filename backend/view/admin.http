@@ -57,3 +57,31 @@ Content-Type: application/json
 {
     "user_id": "aa8620e1-c6dc-4a72-987e-7368c087c093"
 }
+
+### this is to change the status
+PATCH  http://localhost:3000/admin/memberships/status
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmZjZiOTYwLTg1YjctNDZjNC05NmM0LTdlOWY1ZmM3ZjM4MiIsImVtYWlsIjoiYWRtaW5hMTAwQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NDA2MDg5NywiZXhwIjoxNzg0MDYxNzk3fQ.OV1nT8W2iZl7nZ8OuEEMBYiaf2fU3BnRLgguevtJIIA
+Content-Type: application/json
+
+{
+    "user_id": "aa8620e1-c6dc-4a72-987e-7368c087c093"
+}
+
+### this is the update user route
+PATCH http://localhost:3000/admin/Update
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhmNDA5NjE3LTg5MjgtNDQ4My1hZTA3LTU3MGUyNDU5ODBjNiIsImVtYWlsIjoibGxhbGxhQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzY5NjQ4OSwiZXhwIjoxNzg3Njk3Mzg5fQ.bMwuQIRakL10nPz8cXjqHJUWFZJQbd2EmWTibabPG_g
+Content-Type: application/json
+
+{
+    "email": "josejoses@gmail.com",
+    "new_password": "100000000000000000000000"
+}
+
+### this is login route
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+     "email": "llalla@gmail.com",
+    "password": "llalla@gmail.com"
+}

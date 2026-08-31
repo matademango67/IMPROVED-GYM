@@ -29,7 +29,7 @@ AdminRouter.get('/',verifyAccessToken, verifyEmployee, auth_controller.getUsers)
 AdminRouter.post('/register', verifyAccessToken, verifyAdmin, validateUserMiddleware, (req, res) => auth_controller.registerUser(req, res, "admin"));
 AdminRouter.post('/register/employee', verifyAccessToken, verifyAdmin, validateUserMiddleware, (req, res) => auth_controller.registerUser(req, res, "employee"));
 AdminRouter.patch('/setUserStatus',verifyAccessToken, verifyEmployee,validateStatusMiddleware, auth_controller.setUserStatus)
-
+AdminRouter.patch('/Update', verifyAccessToken , verifyAdmin, validateUpdateMiddleware ,  auth_controller.update);
 
 
       

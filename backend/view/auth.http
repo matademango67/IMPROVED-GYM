@@ -19,16 +19,6 @@ Content-Type: application/json
      "email": "admina100@gmail.com",
     "password": "admina100@gmail.com"
 }
-### this is the update user route
-PATCH http://localhost:3000/auth/Update
-Content-Type: application/json
-
-{
-    "email": "Pal100sancos@gmail.com",
-    "password": "222222221",
-    "new_email": "Pal11000sancos@gmail.com",
-    "new_password": "2222222211"
-}
 
 ### this is the refresh route 
 

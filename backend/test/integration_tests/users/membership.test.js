@@ -436,7 +436,6 @@ describe('PATCH /membership/status' , () => {
      }) 
     })
 })
- // hacerlo
 
 
 //pnpm test /membership.test.js

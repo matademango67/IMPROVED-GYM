@@ -16,5 +16,6 @@ optimizar la authorizacion ?
 
 check the payment integration test later + fix  rror: update or delete on table "memberships" violates foreign key constraint "payments_memberships_id_fkey" on table "payments"
  chnage customera to customer
-add the user integration later in both
 chech membershipa i have to fix a request in get memberships when i change to my real database
+
+since im in production i return a lot of sensitive data i must stopped that later

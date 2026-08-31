@@ -33,74 +33,106 @@ describe("authorization" , () => {
     });
     });
 
-/*p
-describe('GET /payments/' , () => {
+
+describe('GET /payments/', () => {
     let testUser;
     let testcustomer;
     let testmembership;
     let testpayment;
 
     beforeEach(async () => {
-        testUser = await createTestUser()
-        testcustomer = await createTestCustomer(testUser)
-        testmembership = await createTestMembership(testcustomer)
-        testpayment = await createTestPayment(testmembership)
+        testUser = await createTestUser();
+        testcustomer = await createTestCustomer(testUser);
+        testmembership = await createTestMembership(testcustomer);
+        testpayment = await createTestPayment(testmembership);
     });
 
-    /*afterEach(async () => {
-        await pool.query(
-            "DELETE FROM users WHERE id = $1",
-            [testUser.id]
-        );
-    }); 
-    test('gets the users payment > 200' , async  () => {
-         const token = createTestToken(testUser)
-
-         const response = await request(app)
-         .get('/payments/')
-         .set("Authorization", `Bearer ${token}`);
-
-         expect(response.statusCode).toBe(200)
-         expect(response.body).toEqual(
-           expect.arrayContaining([
-            expect.objectContaining({
-             'amount': 1500.00 ,
-             'memberships_id': testmembership.id
-            })
-        ])
-    );
- })
-
- describe('NO PAYMENTS' , () => {
-     let testUser;
-    let testcustomer;
-    let testmembership;
-
-    beforeEach(async () => {
-        testUser = await createTestUser()
-        testcustomer = await createTestCustomer(testUser)
-        testmembership = await createTestMembership(testcustomer)
-    })
-
     afterEach(async () => {
+        // Delete payment first because it depends on membership
+        await pool.query(
+            "DELETE FROM payments WHERE memberships_id = $1",
+            [testmembership.id]
+        );
+
+        // Delete membership because it depends on customer
+        await pool.query(
+            "DELETE FROM memberships WHERE id = $1",
+            [testmembership.id]
+        );
+
+        // Delete customer because it depends on user
+        await pool.query(
+            "DELETE FROM customers WHERE id = $1",
+            [testcustomer.id]
+        );
+
+        // Delete user last
         await pool.query(
             "DELETE FROM users WHERE id = $1",
             [testUser.id]
         );
+    });
 
-    test('Get /payments/ - no payments > 200' , async () => {
-        const token = createTestToken(testUser)
+    test('gets the users payment > 200', async () => {
+        const token = createTestToken(testUser);
 
         const response = await request(app)
-         .get('/payments/')
-         .set("Authorization", `Bearer ${token}`);
+            .get('/payments/')
+            .set("Authorization", `Bearer ${token}`);
 
-          expect(response.statusCode).toBe(200)
-         expect(response.body).toEqual([]);
-    })
+        expect(response.statusCode).toBe(200);
 
- })
-})
+        expect(response.body).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    amount: 1500.00,
+                    memberships_id: testmembership.id
+                })
+            ])
+        );
+    });
+
+    describe('NO PAYMENTS', () => {
+        let testUser;
+        let testcustomer;
+        let testmembership;
+
+        beforeEach(async () => {
+            testUser = await createTestUser();
+            testcustomer = await createTestCustomer(testUser);
+            testmembership = await createTestMembership(testcustomer);
+        });
+
+        afterEach(async () => {
+            // No payments exist, so membership can be deleted directly
+            await pool.query(
+                "DELETE FROM memberships WHERE id = $1",
+                [testmembership.id]
+            );
+
+            await pool.query(
+                "DELETE FROM customers WHERE id = $1",
+                [testcustomer.id]
+            );
+
+            await pool.query(
+                "DELETE FROM users WHERE id = $1",
+                [testUser.id]
+            );
+        });
+
+        test('Get /payments/ - no payments > 200', async () => {
+            const token = createTestToken(testUser);
+
+            const response = await request(app)
+                .get('/payments/')
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(200);
+
+            expect(response.body).toEqual([]);
+        });
+    });
 });
 
 
@@ -110,6 +142,7 @@ describe('POST /payments/', () => {
     let testmembership;
 
     describe('with membership', () => {
+
         beforeEach(async () => {
             testUser = await createTestUser();
             testcustomer = await createTestCustomer(testUser);
@@ -117,13 +150,32 @@ describe('POST /payments/', () => {
         });
 
         afterEach(async () => {
+            // Delete payments first
+            await pool.query(
+                "DELETE FROM payments WHERE memberships_id = $1",
+                [testmembership.id]
+            );
+
+            // Delete membership
+            await pool.query(
+                "DELETE FROM memberships WHERE id = $1",
+                [testmembership.id]
+            );
+
+            // Delete customer
+            await pool.query(
+                "DELETE FROM customers WHERE id = $1",
+                [testcustomer.id]
+            );
+
+            // Delete user last
             await pool.query(
                 "DELETE FROM users WHERE id = $1",
                 [testUser.id]
             );
         });
 
-      test('POST /payments/ - Creates payment > 201', async () => {
+        test('POST /payments/ - Creates payment > 201', async () => {
             const token = createTestToken(testUser);
 
             const response = await request(app)
@@ -155,20 +207,29 @@ describe('POST /payments/', () => {
 
             expect(result.rows[0]).toEqual(
                 expect.objectContaining({
-                    amount: 1500, 
+                    amount: 1500,
                     memberships_id: testmembership.id
                 })
             );
         });
-    }); 
+    });
+
 
     describe('no membership', () => {
+
         beforeEach(async () => {
             testUser = await createTestUser();
             testcustomer = await createTestCustomer(testUser);
         });
 
         afterEach(async () => {
+            // Delete customer first
+            await pool.query(
+                "DELETE FROM customers WHERE id = $1",
+                [testcustomer.id]
+            );
+
+            // Delete user last
             await pool.query(
                 "DELETE FROM users WHERE id = $1",
                 [testUser.id]
@@ -189,7 +250,8 @@ describe('POST /payments/', () => {
             });
         });
     });
-});   */
+}); 
 
+//pnpm test /payments.test.js
 
 

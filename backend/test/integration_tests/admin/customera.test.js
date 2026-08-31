@@ -48,9 +48,11 @@ describe('Authorization' , () => {
 
 describe('GET /admin/customers' , () => {
     let testAdmin;
+    let testCustomer;
 
     beforeEach(async () => {
         testAdmin = await createTestUser({role: 'admin'})
+        testCustomer = await createTestCustomer(testAdmin)
     })
 
     afterEach(async() => {
@@ -58,10 +60,15 @@ describe('GET /admin/customers' , () => {
             "DELETE FROM users WHERE id = $1",
             [testAdmin.id]
         );
+
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testCustomer.id]
+        );
     })
 
     test('GET /admin/customers - it should return all customers > 200', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .get('/admin/customers')
@@ -69,12 +76,12 @@ describe('GET /admin/customers' , () => {
 
         expect(response.statusCode).toBe(200)
 
-        const result = await pool.query('SELECT * FROM customers ORDER BY id')
-
-     //   expect(response.body).toEqual(
-    //JSON.parse(JSON.stringify(result.rows)) 
-//);
-    });
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+            expect.objectContaining({ id: testCustomer.id, email: testCustomer.email })
+        ])
+    );
+})
 })
 
 describe('GET /admin/findcustomer/:search' , () => {
@@ -101,7 +108,7 @@ describe('GET /admin/findcustomer/:search' , () => {
     })
 
     test('GET /admin/findcustomer/:search - retrun all the customers matching the name > 200', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .get('/admin/findcustomer/Integration Test')
@@ -112,18 +119,18 @@ describe('GET /admin/findcustomer/:search' , () => {
         FROM customers
         WHERE name ILIKE $1
            OR email ILIKE $1
-        ` , [`${testCustomer.name}`])
+        ` , [`${testCustomer.email}`])
 
-      // const expected = JSON.parse(JSON.stringify(result.rows));
+       const expected = JSON.parse(JSON.stringify(result.rows));
 
         expect(response.statusCode).toBe(200)
-      /*  expect(response.body).toEqual(
+        expect(response.body).toEqual(
     expect.arrayContaining(expected)
-);*/
+);
     })
 
     test('GET /admin/findcustomer/:search - customer not found > 404', async () => {
-        const token = await createTestToken(testAdmin)
+        const token =  createTestToken(testAdmin)
 
         const response = await request(app)
         .get('/admin/findcustomer/Integration Testas12121212122')

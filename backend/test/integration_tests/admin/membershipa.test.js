@@ -21,9 +21,15 @@ describe('PATCH /admin/memberships/status - Authorization' ,  () => {
 
 describe('GET /admin/memberships' , () => {
     let testAdmin;
+    let testUser;
+    let testCustomer;
+    let testMembership;
 
     beforeEach(async () => {
         testAdmin = await createTestUser({role: 'admin'})
+        testUser = await createTestUser()
+        testCustomer = await createTestCustomer(testUser)
+        testMembership = await createTestMembership(testCustomer)
     })
 
     afterEach(async() => {
@@ -31,28 +37,24 @@ describe('GET /admin/memberships' , () => {
             "DELETE FROM users WHERE id = $1",
             [testAdmin.id]
         );
+
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testUser.id]
+        );
     })
 
     test('GET /admin/memberships - it should return all memberships > 200', async () => {
         const token = await createTestToken(testAdmin)
 
         const response = await request(app)
-        .get('/admin/memberships')
-        .set("Authorization" , `Bearer ${token}`);
-
-     /*   const result = await pool.query(
-    'SELECT * FROM memberships ORDER BY id'
-);
-
-//const expected = JSON.parse(JSON.stringify(result.rows));
-//expect(response.body).toEqual(expected);
-*/
-
-expect(response.statusCode).toBe(200);
-   
+            .get('/admin/memberships')
+            .set("Authorization" , `Bearer ${token}`)
+            
+        expect(response.statusCode).toBe(200);
+       
     });
 })
-
 
 describe('PATCH /admin/memberships/type' ,  () => {
 let testAdmin;
@@ -307,7 +309,7 @@ let testMembership;
     })
 
     test('cant change status > 400' , async () => {
-         const token = await createTestToken(testAdmin)
+         const token =  createTestToken(testAdmin)
 
        const response = await request(app)
     .patch('/admin/memberships/status')

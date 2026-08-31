@@ -74,43 +74,42 @@ export class auth_model {
        return { AccessToken, refreshToken , status: user.status};
     }
 
-    static async update(email , hashedPassword, new_email, new_password){
+    static async update(email ,  new_password){
         const result = await pool.query(
                     "SELECT * FROM users WHERE email = $1",
                     [email] );
                     const user = result.rows[0];
-                    console.log(user);
-                    console.log(email , hashedPassword, new_email, new_password);
             if (!user) {
                 throw new Error("User not found");
              }
         
-        const isValid = await bcrypt.compare(hashedPassword, user.password_hash);
-        if (!isValid) {
-           throw new Error("Invalid password");
+        const passwordMatches = await bcrypt.compare(
+            new_password,
+            result.rows[0].password_hash
+        );
+
+        if(passwordMatches === true){
+            throw new Error("cant change the same password")
         }
+
         const newhashedPassword = await bcrypt.hash(new_password, saltrounds)
-        console.log(newhashedPassword)
         const newUser = await pool.query(
-            "UPDATE users SET password_hash = $1 , email = $2 WHERE email = $3 RETURNING *",
-            [newhashedPassword, new_email, email]
+            "UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING *",
+            [newhashedPassword, email]
         );
         return newUser.rows[0];
     }
 
     static async refresh_token(refreshToken) {
         const token_hash = hashToken(refreshToken);
-        console.log('Received refreshToken:', refreshToken);
-        console.log('Token hash:', token_hash);
-        const query = `SELECT user_id , expires_at FROM refresh_tokens WHERE token_hash = $1;`
         try {
-           const result = await pool.query(query, [token_hash]);
-           console.log('Query result:', result.rows);
+           const result = await pool.query(`SELECT user_id , expires_at FROM refresh_tokens WHERE token_hash = $1;`, [token_hash]);
 
               if (!result.rows.length) {
             throw new Error('Invalid refresh token');
         }   
-          const { user_id, expires_at } = result.rows[0];
+
+        const user_id = result.rows[0].user_id
 
         if (result.rows[0].expires_at < new Date()) {
              await pool.query( `Delete FROM refresh_tokens WHERE token_hash = $1;`, [token_hash] )
@@ -129,23 +128,33 @@ export class auth_model {
     }
         } 
 
-        static async logout(refreshToken) {
-        if (typeof refreshToken !== 'string' || !refreshToken) return;
-
-        const tokenHash = hashToken(refreshToken);
-        try {
-            await pool.query(
-                `DELETE FROM refresh_tokens WHERE token_hash = $1`,
-                [tokenHash]
-            );
-            console.log('Token deleted successfully');
-        } catch (error) {
-            console.error('Error deleting token:', error);
-            throw error;
-        }
+      static async logout(refreshToken) {
+    if (typeof refreshToken !== 'string' || !refreshToken) {
+        throw new Error('invalid refreshToken');
     }
 
-     static async setUserStatus(input){   //admin route
+    const tokenHash = hashToken(refreshToken);
+
+    try {
+        const result = await pool.query(
+            `DELETE FROM refresh_tokens
+             WHERE token_hash = $1`,
+            [tokenHash]
+        );
+
+        if (result.rowCount === 0) {
+            throw new Error('invalid refreshToken');
+        }
+
+        console.log('Token deleted successfully');
+
+    } catch (error) {
+        console.error('Error deleting token:', error);
+        throw error;
+    }
+}
+
+     static async setUserStatus(input){   
         const {user_id, status, status_reason} = input
           const user = await pool.query(
                 `UPDATE users

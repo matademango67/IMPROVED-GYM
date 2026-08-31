@@ -78,14 +78,19 @@ export class auth_controller {
 
       static async update(req,res){
         try {
-            const { email, password, new_email, new_password } = req.body;
-            const user = await auth_model.update(email, password, new_email, new_password);
+            const { email,  new_password } = req.body;
+            const user = await auth_model.update(email,  new_password);
+
             return res.status(200).json({
                 status: "success",
                 message: "User updated successfully",
                 user: user
             });
       } catch (error) {
+
+        if(error.message === 'cant change the same password' || error.message === "User not found"){
+            return res.status(400).json({message : error.message})
+        }
         if(error.statusCode === 401) {
             return res.status(401).json({
                 status: "fail",
@@ -100,14 +105,14 @@ export class auth_controller {
 }
 
       static async refreshToken(req,res){
-          // If credentials are provided, treat this as a login request
+        // treat it as a login if i gets crendentials
   if (req.body && req.body.email && req.body.password) {
     try {
       const { email, password } = req.body
-    const hashedPassword = await bcrypt.hash(password, saltrounds);
       const user = await auth_model.login(email, password)
 
       console.log('Refresh-as-login successful for:', email)
+      console.log(user.AccessToken)
       return res
         .status(200)
         .cookie('refreshToken', user.refreshToken, {
@@ -115,12 +120,13 @@ export class auth_controller {
           sameSite: 'strict',
           secure: false
         })
-        .json({ token: user.accessToken })
+        .json({ token: user.AccessToken })
+        
     } catch (err) {
       return res.status(err.statusCode || 401).json({ message: err.message })
     }
   }
-     const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
+     const refreshToken = req.cookies?.refreshToken;
         if (!refreshToken) {
             return res.status(401).json({ message: 'No refresh token provided' });
         }
@@ -137,26 +143,50 @@ export class auth_controller {
                         secure: false
                     })
                     .json({ token: tokens.AccessToken });
+
             } catch (error) {
-                res.status(401).json({ message: 'Invalid refresh token' });
+                if(error.message === 'Refresh token expired' || error.message === 'User not found' || error.message === 'Invalid refresh token'){
+                    return res.status(401).json({message : error.message})
+                }
+                console.log('im the error' + error)
+               return res.status(500).json({ message: error.message});
             }
 
 }  
-   static async logout(req,res){
-    const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
+   static async logout(req, res) {
+    const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
+
     if (!refreshToken) {
-        return res.status(400).json({ message: 'No refresh token provided' });
+        return res.status(400).json({
+            message: 'No refresh token provided'
+        });
     }
+
     try {
         await auth_model.logout(refreshToken);
+
         res.clearCookie('refreshToken', {
             httpOnly: true,
             sameSite: 'strict',
             secure: false
         });
-        res.status(200).json({ message: 'Logged out successfully' });
+
+        return res.status(200).json({
+            message: 'Logged out successfully'
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error logging out' });
+        console.log("LOGOUT ERROR:", error);
+
+        if (error.message === 'invalid refreshToken') {
+            return res.status(400).json({
+                message: error.message
+            });
+        }
+
+        return res.status(500).json({
+            message: 'Error logging out'
+        });
     }
 }
 

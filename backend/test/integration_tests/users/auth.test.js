@@ -8,15 +8,13 @@ import {createTestToken , testUserAuthorization} from "../../helpers/auth_helper
 import { createTestUser } from "../../helpers/db_helper.js";
 import bcrypt from "bcrypt"
 import jwt from 'jsonwebtoken';
+import {randomUUID} from 'node:crypto';
+import { hashToken , generateRefreshToken} from "../../../config/refresh_token.js";
 
 const saltrounds = Number(process.env.SALT_ROUNDS.trim())
 
 describe('GET /auth/ - Authorization' ,  () => {
     testUserAuthorization('get','/auth/')
-});
-
-describe('PATCH /auth/Update - Authorization' ,  () => {
-    testUserAuthorization('patch','/auth/Update')
 });
 
 describe('DELETE /auth/me - Authorization' ,  () => {
@@ -38,7 +36,7 @@ describe('GET /auth/' , () => {
     })
 
     test('GET /auth/ - it should return the user > 200', async () => {
-        const token = await createTestToken(testUser)
+        const token =  createTestToken(testUser)
 
         const response = await request(app)
         .get('/auth/')
@@ -157,9 +155,9 @@ describe('POST /auth/register' , () => {
         );
 
         expect(response.statusCode).toBe(201);
-     //   expect(response.body).toEqual(result.rows[0]);
-     //   expect(result.rows.length).toBe(1);
-      //  expect(result.rows[0].role).toBe('customer');
+        expect(response.body).toEqual(result.rows[0]);
+        expect(result.rows.length).toBe(1);
+        expect(result.rows[0].role).toBe('customer');
    
     });
 });
@@ -245,10 +243,302 @@ describe('POST /auth/login' , () => {
     });
 });
 
+describe('post /auth/refresh' ,  () => {
+   let testuser;
+
+    beforeEach(async () => {
+        testuser = await createTestUser()
+    })
+
+    afterEach(async() => {
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testuser.id]
+        );
+    })
+
+       test('POST /auth/refresh - return a new access token > 200', async () => {
+        const loginResponse = await request(app)
+         .post('/auth/login')
+         .send({
+             email: testuser.email,
+             password: "fake-password"
+            });
+
+        const cookies = loginResponse.headers['set-cookie'];
+
+       const response = await request(app)
+        .post('/auth/refresh')
+        .set("Cookie", cookies);
+
+       const result = await pool.query(`SELECT * FROM refresh_tokens WHERE user_id = $1` , [testuser.id])
+
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toHaveProperty('token');
+
+        expect(response.headers['set-cookie']).toBeDefined();
+        expect(response.headers['set-cookie'].join(';')).toContain('refreshToken');
+
+        expect(result.rows.length).toBe(2)
+        
+        await pool.query(`DELETE FROM refresh_tokens WHERE user_id = $1` , [testuser.id])
+
+    });
+
+       test('POST /auth/refresh - no refresh token > 401', async () => {
+    const response = await request(app)
+        .post('/auth/refresh')
+
+   
+
+    expect(response.statusCode).toBe(401);
+
+    expect(response.body).toEqual({
+        message: 'No refresh token provided'
+    });
+
+    expect(response.headers['set-cookie']).toBeFalsy();
+
+    });
+
+       test('POST /auth/refresh - invalid refresh token > 401', async () => {
+    const response = await request(app)
+        .post('/auth/refresh')
+        .set('Cookie', ['refreshToken=invalid-refresh-token']);
+
+    const result = await pool.query(
+        `SELECT * FROM refresh_tokens WHERE user_id = $1`,
+        [testuser.id]
+    );
+
+    expect(response.statusCode).toBe(401);
+
+    expect(response.body).toEqual({
+        message: 'Invalid refresh token'
+    });
+
+    expect(response.headers['set-cookie']).toBeFalsy();
+
+    expect(result.rows.length).toBe(0);
+    });
+
+      test('POST /auth/refresh - expired refresh token > 401', async () => {
+    const refreshToken = generateRefreshToken();
+    const token_hash = hashToken(refreshToken);
+    const token_id = crypto.randomUUID();
+
+    await pool.query(`
+        INSERT INTO refresh_tokens(
+            user_id,
+            token_hash,
+            token_id,
+            expires_at
+        )
+        VALUES($1, $2, $3, $4)
+    `, [
+        testuser.id,
+        token_hash,
+        token_id,
+        '2026-07-10 21:07:54.944'
+    ]);
+
+    const response = await request(app)
+        .post('/auth/refresh')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+    const result = await pool.query(
+    `SELECT * FROM refresh_tokens WHERE token_id = $1`,
+    [token_id]
+);
+
+
+    expect(response.statusCode).toBe(401);
+
+    expect(response.body).toEqual({
+        message: 'Refresh token expired'
+    });
+
+    expect(response.headers['set-cookie']).toBeFalsy();
+    expect(result.rows.length).toBe(0);
+});
+
+
+
+
+
+    describe('treated as login' , () => {
+      let testuser;
+
+    beforeEach(async () => {
+        testuser = await createTestUser()
+    })
+
+    afterEach(async() => {
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testuser.id]
+        );
+    })
+
+            test('POST /auth/refresh - logs in the user > 200', async () => {
+     const response = await request(app)
+        .post('/auth/refresh')
+        .send({ email: testuser.email, password: "fake-password"});
+
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toHaveProperty('token');
+
+        expect(response.headers['set-cookie']).toBeDefined();
+        expect(response.headers['set-cookie'][0]).toContain('refreshToken');
+
+    });
+
+   test('POST /auth/refresh - logs in the user with an incorrect password > 401', async () => {
+     const response = await request(app)
+        .post('/auth/refresh')
+        .send({ email: testuser.email, password: "fake-passwords"});
+
+        expect(response.statusCode).toBe(401);
+        expect(response.body).toEqual({message : "Invalid password"});
+    });
+    })
+});
+
+describe('DELETE /auth/logout' ,  () => {
+   let testuser;
+
+    beforeEach(async () => {
+        testuser = await createTestUser()
+    })
+
+    afterEach(async() => {
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testuser.id]
+        );
+    })
+
+   test('POST /auth/logout - user logged out successfully > 200', async () => {
+
+    const agent = request.agent(app);
+
+    const loginResponse = await agent
+        .post('/auth/login')
+        .send({
+            email: testuser.email,
+            password: 'fake-password'
+        });
+
+    expect(loginResponse.statusCode).toBe(200);
+
+    expect(loginResponse.body).toEqual(
+        expect.objectContaining({
+            message: 'Login successful',
+            accessToken: expect.any(String)
+        })
+    );
+
+    const logoutResponse = await agent
+        .delete('/auth/logout');
+
+    expect(logoutResponse.statusCode).toBe(200);
+
+    expect(logoutResponse.body).toEqual({
+        message: 'Logged out successfully'
+    });
+
+    expect(logoutResponse.body).not.toHaveProperty('accessToken');
+    });
+
+   test('POST /auth/logout - no user logged in > 400', async () => {
+    const logoutResponse = await request(app)
+        .delete('/auth/logout');
+
+    expect(logoutResponse.statusCode).toBe(400);
+
+    expect(logoutResponse.body).toEqual({
+        message: 'No refresh token provided'
+    });
+   });
+
+   test('POST /auth/logout - Invalid refresh token > 400', async () => {
+    const logoutResponse = await request(app)
+        .delete('/auth/logout')
+         .send({
+                refreshToken: 'invalid-refresh-token'
+            });
+
+    expect(logoutResponse.statusCode).toBe(400);
+
+    expect(logoutResponse.body).toEqual({
+        message: 'invalid refreshToken'
+    });
+   });
+
+});
+
+describe('DELETE /auth/me' ,  () => {
+   let testuser;
+
+    beforeEach(async () => {
+        testuser = await createTestUser()
+    })
+
+    afterEach(async() => {
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [testuser.id]
+        );
+    })
+
+   test('Delete /auth/me - inactivates the user > 200', async () => {
+    const token = createTestToken(testuser)
+
+    const Response = await request(app)
+        .delete('/auth/me')
+        .set("Authorization" , `Bearer ${token}`)
+        .send({
+            status_reason: 'i dont like it anymore'
+        });
+
+    const result = await pool.query(
+    "SELECT status, status_reason FROM users WHERE id = $1",
+    [testuser.id]
+    );
+
+    expect(Response.statusCode).toBe(200);
+    expect(Response.body).toEqual({message: 'Account inactivated successfully',});
+    expect(result.rows[0].status).toBe('inactive');
+    expect(result.rows[0].status_reason).toBe('i dont like it anymore');
+    expect(Response.body).not.toHaveProperty('accessToken');
+
+    });
+
+    describe('no user', () => {
+         test('Delete /auth/me - no user > 404', async () => {
+    const testuser = {id : randomUUID() , role : 'user'}
+    const token = createTestToken(testuser)
+
+    const Response = await request(app)
+        .delete('/auth/me')
+        .set("Authorization" , `Bearer ${token}`)
+        .send({
+            status_reason: 'i dont like it anymore'
+        });
+
+    expect(Response.statusCode).toBe(404);
+
+    expect(Response.body).toEqual({message: 'User not found'});
+
+    });
+    })
+
+});
+
+
 // refresh route
 
-//describe('PATCH /auth/Update' ,  () => {
-    
-//});
+
 
  //pnpm test /auth.test.js
+

@@ -7,8 +7,6 @@ const userSchema = z.object({
 
 const updateSchema = z.object({
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters long"),
-    new_email: z.string().email("Invalid email address").optional(),
     new_password: z.string().min(6, "Password must be at least 6 characters long").optional()
 });
 

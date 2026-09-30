@@ -1,44 +1,46 @@
 import jwt from 'jsonwebtoken';
+import { UnauthorizedError } from './errors/ErrorsIndex.js';
 
 export function verifyAccessToken(req, res, next) {
-
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-            status: 'fail',
-            message: 'Access token required'
-        });
-    }
-
-    const token = authHeader.split(' ')[1];
-
     try {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            throw new UnauthorizedError("Access Token required");
+        }
+
+        const token = authHeader.split(" ")[1];
+
+        if (!token) {
+    throw new UnauthorizedError("Access Token required");
+}
 
         const decoded = jwt.verify(
             token,
             process.env.ACCESS_TOKEN_SECRET
         );
 
+        if (!decoded.id || !decoded.role) {
+            throw new UnauthorizedError("Invalid Access Token");
+        }
+
         req.user = {
-            id: decoded.id,
-            role: decoded.role
+            role: decoded.role,
+            id: decoded.id
         };
 
         next();
 
     } catch (error) {
 
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Access token expired'
-            });
+        if (error instanceof UnauthorizedError) {
+            throw error;
         }
 
-        return res.status(401).json({
-            status: 'fail',
-            message: 'Invalid access token'
-        });
+        if (error.name === "TokenExpiredError") {
+            throw new UnauthorizedError("Token is expired");
+        }
+
+        throw new UnauthorizedError("Invalid token");
     }
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ValidationError } from "./errors/ErrorsIndex.js";
 
 const customers = z.object({
     name: z.string("name is required").min(1, "Name is required").max(30, "Name must be less than 100 characters"),
@@ -16,31 +17,37 @@ const membership = z.object({
     status: z.enum(["active", 'expired', 'banned', 'paused']).optional(),
 });
 
- function Validar_customer(object){
+ export function validar_customer(object){
      return customers.safeParse(object)
 }
 
- function Validar_membership(object){
+ export function validar_membership(object){
      return membership.safeParse(object)
 }
 
- export function validateCustomerMiddleware(req,res,next){
-    const result = Validar_customer(req.body);
-    if(!result.success){
-        //flatten es para que el mensaje de error se vea mejor(basicamente)
-         return res.status(400).json({ error: result.error.issues[0].message})
-    }
-    next()
- }
+export function validate(schema) {
+    return (req, res, next) => {
 
-  export function validateMembershipMiddleware(req,res,next){
-    const result = Validar_membership(req.body);
-    if(!result.success){
-        //flatten es para que el mensaje de error se vea mejor(basicamente)
-        
-        return res.status(400).json({ error: result.error.issues[0].message})
-    }
-    next()
- }
+        const result = schema.safeParse(req.body);
 
-  
+        if (!result.success) {
+
+            const errors = result.error.issues.reduce((acc, issue) => {
+                const field = issue.path[0];
+
+                if (!acc[field]) {
+                    acc[field] = [];
+                }
+
+                acc[field].push(issue.message);
+
+                return acc;
+            }, {});
+
+            throw new ValidationError(errors);
+        }
+
+        req.body = result.data;
+        next();
+    };
+}

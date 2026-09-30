@@ -8,14 +8,10 @@ en el inicio que sea con el nombre en vez del email donde dice bienvenido
 
 
 cambie la database para hacer el integration tests
+introduce la translateDatabaseError al modelo luego
+rename gym membership to controller membership
 
-work on logic behind the memnership
-optimizar la authorizacion ?
-
-
-
-check the payment integration test later + fix  rror: update or delete on table "memberships" violates foreign key constraint "payments_memberships_id_fkey" on table "payments"
- chnage customera to customer
-chech membershipa i have to fix a request in get memberships when i change to my real database
-
-since im in production i return a lot of sensitive data i must stopped that later
+there's a bug where this test insert the users in the database , they delete everything in the foreign key but not the actual table (users)
+//membershipa 5 
+//paymenta 1 
+//autha 5

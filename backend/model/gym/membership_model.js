@@ -54,8 +54,7 @@ if(result.rowCount === 0){
 }
 
 return result.rows;
-
-    }
+}
    
     static async create_membership(input , user_id){
          const { type } = input

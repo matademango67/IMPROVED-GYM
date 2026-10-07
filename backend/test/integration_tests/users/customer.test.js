@@ -16,7 +16,6 @@ describe('GET /customer', () => {
         expect(response.statusCode).toBe(401)
 
                 expect(response.body).toEqual({
-            status: "fail",
             message: "Access token required"
         });
 
@@ -31,7 +30,6 @@ describe('GET /customer', () => {
     expect(response.statusCode).toBe(401);
 
     expect(response.body).toEqual({
-        status: "fail",
         message: "Invalid access token"
     });
 
@@ -133,7 +131,7 @@ afterEach(async () => {
     expect(response.statusCode).toBe(404);
 
     expect(response.body).toEqual({
-    error: "customer not found"
+    message: "Customers not found"
 });
 });
 
@@ -228,7 +226,6 @@ expect(response.body).toEqual(
     expect(response.statusCode).toBe(401);
 
     expect(response.body).toEqual({
-        status: "fail",
         message: "Access token required"
     });
 
@@ -249,7 +246,6 @@ expect(response.body).toEqual(
     expect(response.statusCode).toBe(401);
 
     expect(response.body).toEqual({
-        status: "fail",
         message: "Invalid access token"
     });
 
@@ -284,7 +280,7 @@ expect(response.body).toEqual(
     expect(response.statusCode).toBe(400);
 
     expect(response.body).toEqual({
-    error: "name is required"
+    message: "name is required"
 });
 
 });

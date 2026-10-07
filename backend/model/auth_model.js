@@ -3,21 +3,18 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {token_model} from "./token_model.js";
 import { hashToken , generateRefreshToken} from "../config/refresh_token.js";
+import { NotFoundError , ConflictError , ValidationError} from "../middleware/errors/ErrorsIndex.js";
 
 const saltrounds = Number(process.env.SALT_ROUNDS.trim())
 
 export class auth_model {
 
     static async getme(user_id){
-        try {
             const result = await pool.query(
                 "SELECT * FROM users WHERE id = $1",
                 [user_id]
             );
             return result.rows[0];
-        } catch (error) {
-            throw new Error("Error fetching user: " + error.message);
-        }
     }
     static async getUsers (){
         try {
@@ -28,18 +25,18 @@ export class auth_model {
         }
     }
 
-    static async registerUser(email ,hashedPassword , role){
+    static async registerUser(email ,hashedPassword , role , client ){
         try {
-            const result = await pool.query(
+            const result = await client.query(
                 "INSERT INTO users (email, password_hash , role) VALUES ($1, $2, $3) RETURNING *",
                 [email, hashedPassword , role]
             );
             return result.rows[0];
         } catch (error) { 
             if (error.code === '23505') {
-                throw new Error("User with this email already exists");
+                throw new ConflictError("User with this email already exists");
             }       
-    throw new Error("Error registering user: " + error.message);
+    throw error
         }
     }
 

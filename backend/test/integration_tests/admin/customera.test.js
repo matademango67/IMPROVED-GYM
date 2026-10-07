@@ -14,7 +14,6 @@ describe('Authorization' , () => {
 
         expect(response.statusCode).toBe(401)
          expect(response.body).toEqual({
-            status: "fail",
             message: "Access token required"
         });
       }) ;
@@ -26,7 +25,6 @@ describe('Authorization' , () => {
 
         expect(response.statusCode).toBe(401)
         expect(response.body).toEqual({
-            status: "fail",
             message: "Invalid access token"
         });
       })
@@ -107,7 +105,7 @@ describe('GET /admin/findcustomer/:search' , () => {
         );
     })
 
-    test('GET /admin/findcustomer/:search - retrun all the customers matching the name > 200', async () => {
+    test('GET /admin/findcustomer/:search - return all the customers matching the name > 200', async () => {
         const token =  createTestToken(testAdmin)
 
         const response = await request(app)
@@ -129,6 +127,7 @@ describe('GET /admin/findcustomer/:search' , () => {
 );
     })
 
+
     test('GET /admin/findcustomer/:search - customer not found > 404', async () => {
         const token =  createTestToken(testAdmin)
 
@@ -139,7 +138,7 @@ describe('GET /admin/findcustomer/:search' , () => {
         expect(response.statusCode).toBe(404)
 
         expect(response.body).toEqual(
-        {error : "Customer not found"}
+        {message : "Customer not found"}
 );
     });
 

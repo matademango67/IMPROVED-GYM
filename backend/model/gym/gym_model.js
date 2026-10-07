@@ -1,4 +1,5 @@
 import {pool} from "../../db/gym.js";
+import { NotFoundError , ConflictError} from "../../middleware/errors/ErrorsIndex.js";
 
 export class gym_model {
     static async getCustomer (user_id){
@@ -7,17 +8,16 @@ export class gym_model {
                                        WHERE c.user_id = $1`,[user_id]);
         const rows = result.rows;
         if(rows.length === 0){
-            throw new Error("customer not found")
-        } else{
+            throw new NotFoundError("Customers not found")
+        } 
              return rows;
-        }
     };
 
     static async getAllCustomers() {
         const result = await pool.query(`SELECT * FROM customers ORDER BY id`);
          const rows = result.rows;
         if(rows.length === 0){
-            throw new Error("Customers not found")
+            throw new NotFoundError("Customers not found")
         } else{
              return rows;
         }
@@ -34,32 +34,35 @@ export class gym_model {
         [`%${search}%`]
     );
 
-    return result.rows.length ? result.rows : null;
+    if(result.rowCount === 0){
+       throw new NotFoundError("Customer not found")
+    }
 }
 
-  static async createCustomer(user_id , input) {
+  static async createCustomer(user_id , input , email , client) {
     try {
       const { name, birth } = input;
-      const id = user_id;
-      const select_email = await pool.query(
-        `SELECT email from users
-         WHERE id = $1`,[user_id]
-      ) 
-
-      const email = select_email.rows[0].email
     
-      const result = await pool.query(
+      const result = await client.query(
         `
         INSERT INTO customers (name, birth, email, user_id)
         VALUES ($1, $2, $3, $4)
-        RETURNING *;
+        RETURNING customers.id;
         `,
-        [name, birth, email, id]
+        [name, birth, email, user_id]
       );
 
       return result.rows[0];
     } catch (error) {
-      throw error instanceof Error ? error : new Error(String(error));
+      if (error.code === "23505") {
+    if (error.constraint === "customers_user_id_key") {
+        throw new ConflictError(
+            "This user already has a customer profile"
+        );
+    }
+    throw error;
+}
+
     }
   }
   
@@ -76,8 +79,7 @@ export class gym_model {
     [name, birth, user_id]
     );
    if (result.rowCount === 0) {
-    const error = new Error("Customer not found");
-    error.statusCode = 404;
-    throw error;
+   throw new NotFoundError("Customer not found");
 }
+throw error
 } }

@@ -10,6 +10,7 @@ en el inicio que sea con el nombre en vez del email donde dice bienvenido
 cambie la database para hacer el integration tests
 introduce la translateDatabaseError al modelo luego
 rename gym membership to controller membership
+change the flow instead of creating membership after login it should happen in the register area
 
 there's a bug where this test insert the users in the database , they delete everything in the foreign key but not the actual table (users)
 //membershipa 5 

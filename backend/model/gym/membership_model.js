@@ -1,4 +1,5 @@
  import {pool} from "../../db/gym.js";
+ import { NotFoundError , ConflictError , ValidationError} from "../../middleware/errors/ErrorsIndex.js";
 
 export class Membership_model {
     static async get_memberships(){ 
@@ -17,12 +18,11 @@ export class Membership_model {
             JOIN customers c ON c.id = m.customer_id
             JOIN users u ON u.id = c.user_id
         `);
-        const rows = result.rows;
-        if(rows.length === 0){
-            throw new Error("error")
-        } else{
-             return rows;
-        }
+        
+        if(result.rows.length === 0){
+          throw new NotFoundError("Customers not found")
+        } 
+             return result.rows; 
     }
 
     static async search_membership(user_id){
@@ -48,69 +48,59 @@ export class Membership_model {
 );
 
 if(result.rowCount === 0){
-   const error = new Error("Membership not found");
-    error.statusCode = 404;
-    throw error;
+  throw new NotFoundError("Membership not found");
 }
 
 return result.rows;
 }
    
-    static async create_membership(input , user_id){
+    static async create_membership(input , customer_id , client){
          const { type } = input
-         const customerResult = await pool.query(
- `SELECT id  from customers where user_id = $1` ,
-  [user_id]); 
-                               
- if (customerResult.rowCount === 0) {
-    const error = new Error("Customer not found");
-    error.statusCode = 404;
-    throw error;
-}
-
-  const customer_id = customerResult.rows[0].id;
 
   const query = `
-        INSERT INTO memberships (cost , customer_id , type)
+        INSERT INTO memberships (customer_id , type , cost)
         VALUES (
+         $1
+         $2,
             CASE
-                WHEN $1 = 'normal' THEN 1500
-                WHEN $1 = 'vip' THEN 3000
+                WHEN $2 = 'normal' THEN 1500
+                WHEN $2 = 'vip' THEN 3000
             END,
-            $2,
-            $1
+           
         )
-        RETURNING *;
-    `;
+        RETURNING *`;
 try {
   
-    const result = await pool.query(query, [type, customer_id]);
+    const result = await client.query(query, [customer_id , type]);
 
-    return result.rows[0]|| null;
+    return result.rows[0]
 
 }catch (error) {
 
-   if (error.code === "23505") {
-        const newError = new Error(
-            "Account already has a membership"
-        );
+   if (
+    error.code === "23505" &&
+    error.constraint === "memberships_customer_id_key"
+) {
+    throw new ConflictError(
+        "Account already has a membership"
+    );
+}
 
-        newError.statusCode = 409;
+throw error;
 
-        throw newError;
-    }
-
-    throw error;
 } }
 
-  static async changeStatus_membership(user_id){
-  const customerResult = await pool.query(
-    `SELECT id FROM customers WHERE user_id = $1`,
+  static async changeStatus_membership(user_id){   // i have to remember to pass the customerId
+  
+  const customerResult = await pool.query(`
+    SELECT customer_id
+    FROM customers c
+    WHERE user_id = $1` , 
     [user_id]
-  );
+  )  
 
-  if (customerResult.rowCount === 0) {
-    throw new Error("Customer not found");
+   if (customerResult.rowCount === 0) {
+    throw new NotFoundError("customer not found");
   }
 
   const customerId = customerResult.rows[0].id;
@@ -121,33 +111,29 @@ try {
   );
 
   if (membershipResult.rowCount === 0) {
-    throw new Error("Membership not found");
+    throw new NotFoundError("Membership not found");
   }
 
   const status = membershipResult.rows[0].status;
 
   if (status !== 'active' && status !== 'paused') {
-    throw new Error("You can't change your membership's status due to your current membership status");
+    throw new ValidationError("You can't change your membership's status due to your current membership status");
   }
 
-  const result = await pool.query(
+   await pool.query(
   `UPDATE memberships
 SET status =
   CASE
     WHEN status = 'paused' THEN 'active'
     WHEN status = 'active' THEN 'paused'
   END
-WHERE customer_id = $1`,
+WHERE customer_id = $1
+  RETURNING status`,
   [customerId]
 );
 
-  if (result.rowCount === 0) {
-    throw new Error("Membership's status could not be changed");
-  }
-
   return { message: "Membership's status changed successfully" };
 }
-
 
   static async changeType_membership(user_id){
        const membershipResult = await pool.query(`SELECT memberships.status
@@ -158,13 +144,13 @@ WHERE customer_id = $1`,
          [user_id])
 
        if (membershipResult.rowCount === 0) {
-    throw new Error("Membership not found");
+    throw new NotFoundError("Membership not found");
   }
 
   const status = membershipResult.rows[0].status;
 
         if (status !== 'active') {
-    throw new Error("You can't change your membership's type due to your current status");
+    throw new ValidationError("You can't change your membership's type due to your current status");
   }
       await pool.query(
         `UPDATE memberships m
@@ -180,12 +166,9 @@ WHERE customer_id = $1`,
   from customers c
  WHERE c.id = m.customer_id
  AND c.user_id = $1
- RETURNING *;`, [user_id]
+ RETURNING m.type;`, [user_id]
       )
-
-      const result = "membership's type changed successfully"
-
-      return(result)
+      return("membership's type changed successfully")
  }
 
 }

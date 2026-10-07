@@ -3,7 +3,7 @@ import { auth_controller } from "../controller/auth_controller.js";
 import { gym_controller } from "../controller/gym/gym_controller.js";
 import { paymentController } from "../controller/gym/payment_controller.js";
 import { gym_membership } from "../controller/gym/membership_controller.js";
-import { validateUserMiddleware, validateUpdateMiddleware , validateStatusMiddleware} from "../middleware/auth_validation.js";
+import { statusSchema, validateUserMiddleware ,updateSchema , userSchema } from "../middleware/auth_validation.js";
 import { authorizeRoles} from "../middleware/roles.js"
 import {verifyAccessToken} from "../middleware/accesstoken_validation.js"
 export const AdminRouter = Router();
@@ -26,10 +26,10 @@ AdminRouter.get('/payments',verifyAccessToken, authorizeRoles('admin' , 'employe
 // users routes
 
 AdminRouter.get('/',verifyAccessToken, authorizeRoles('admin' , 'employee'), auth_controller.getUsers);
-AdminRouter.post('/register', verifyAccessToken, authorizeRoles('admin'), validateUserMiddleware, (req, res) => auth_controller.registerUser(req, res, "admin"));
-AdminRouter.post('/register/employee', verifyAccessToken, authorizeRoles('admin'), validateUserMiddleware, (req, res) => auth_controller.registerUser(req, res, "employee"));
-AdminRouter.patch('/setUserStatus',verifyAccessToken, authorizeRoles('admin' , 'employee'),validateStatusMiddleware, auth_controller.setUserStatus)
-AdminRouter.patch('/Update', verifyAccessToken , authorizeRoles('admin'), validateUpdateMiddleware ,  auth_controller.update);
+AdminRouter.post('/register', verifyAccessToken, authorizeRoles('admin'), validateUserMiddleware(userSchema), (req, res) => auth_controller.registerUser(req, res, "admin"));
+AdminRouter.post('/register/employee', verifyAccessToken, authorizeRoles('admin'), validateUserMiddleware(userSchema), (req, res) => auth_controller.registerUser(req, res, "employee"));
+AdminRouter.patch('/setUserStatus',verifyAccessToken, authorizeRoles('admin' , 'employee'),validateUserMiddleware(statusSchema), auth_controller.setUserStatus)
+AdminRouter.patch('/Update', verifyAccessToken , authorizeRoles('admin'), validateUserMiddleware(updateSchema) ,  auth_controller.update);
 
 
       

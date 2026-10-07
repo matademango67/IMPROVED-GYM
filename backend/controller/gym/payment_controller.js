@@ -1,42 +1,23 @@
 import { paymentsModel } from "../../model/gym/payment_model.js"
 
  export class paymentController{
-  static async get_mypayments(req,res){
-     try{
-        const user_id = req.user.id;
 
+  static async get_mypayments(req,res){
+        const user_id = req.user.id;
        const result = await paymentsModel.get_mypayments(user_id)
      return res.status(200).json(result);
-    } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
     }
-}
+
 
  static async get_allpayments(req,res){
-    try{
         const result = await paymentsModel.get_allpayments()
         return res.status(200).json(result);
-    } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
-    }}
+    }
 
 
  static async create_payment(req,res){
     const user_id = req.user.id;
-    try{
-        const newpayment = await paymentsModel.create_payment(user_id)
-        return res.status(201).json(newpayment);
-    } catch (error) {
-        if(error.message === "Membership not found"){
-            return res.status(404).json({error: error.message})
-        }
-         return res.status(500).json({
-        error: error.message
-    });
-    }
+    const newpayment = await paymentsModel.create_payment(user_id)
+    return res.status(201).json(newpayment);
  }
  }

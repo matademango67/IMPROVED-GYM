@@ -301,4 +301,4 @@ test("should return 404 when customer is not found", async () => {
 });
 })
 
-//pnpm test /createCustomer.test.js
+//pnpm test /customer.controller.test.js

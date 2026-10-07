@@ -15,7 +15,6 @@ describe("authorization" , () => {
 
        expect(response.statusCode).toBe(401)
        expect(response.body).toEqual({
-            status: "fail",
             message: "Access token required"
         });
     });
@@ -27,7 +26,6 @@ describe("authorization" , () => {
 
        expect(response.statusCode).toBe(401)
        expect(response.body).toEqual({
-            status: "fail",
             message: "Invalid access token"
         });
     });
@@ -111,7 +109,7 @@ afterEach(async () => {
             expect(response.statusCode).toBe(404);
 
             expect(response.body).toEqual({
-                error: "Membership not found"
+                message: "Membership not found"
             });
 
         })
@@ -186,7 +184,7 @@ describe('POST /membership/' , () => {
     expect(response.statusCode).toBe(400);
 
      expect(response.body).toEqual({
-    error: "Invalid option: expected one of \"normal\"|\"vip\"",
+    message: "Invalid option: expected one of \"normal\"|\"vip\"",
 });
      });
 
@@ -202,7 +200,7 @@ describe('POST /membership/' , () => {
     expect(response.statusCode).toBe(400);
 
     expect(response.body).toEqual({
-    error: "Invalid option: expected one of \"normal\"|\"vip\"",
+    message: "Invalid option: expected one of \"normal\"|\"vip\"",
 });
      });
 

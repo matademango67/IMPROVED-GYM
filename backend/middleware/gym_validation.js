@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ValidationError } from "./errors/ErrorsIndex.js";
 
-const customers = z.object({
+export const customers = z.object({
     name: z.string("name is required").min(1, "Name is required").max(30, "Name must be less than 100 characters"),
     birth: z.string().refine(
         (date) => !isNaN(Date.parse(date)),
@@ -12,23 +12,15 @@ const customers = z.object({
     )
 });
 
-const membership = z.object({
+export const membership = z.object({
     type: z.enum(["normal","vip"]),
     status: z.enum(["active", 'expired', 'banned', 'paused']).optional(),
 });
 
- export function validar_customer(object){
-     return customers.safeParse(object)
-}
-
- export function validar_membership(object){
-     return membership.safeParse(object)
-}
-
-export function validate(schema) {
+export function validate(object) {
     return (req, res, next) => {
 
-        const result = schema.safeParse(req.body);
+        const result = object.safeParse(req.body);
 
         if (!result.success) {
 

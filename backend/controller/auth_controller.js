@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-
 import {auth_model} from "../model/auth_model.js";
 
 
@@ -8,46 +7,25 @@ const saltrounds = Number(process.env.SALT_ROUNDS.trim())
 export class auth_controller {
 
    static async getme(req,res){
-    try {
+   
         const user_id = req.user.id;
         const user = await auth_model.getme(user_id);
-        if(!user){
-            return res.status(404).json({ message : 'User not found'})
-        }
         return res.status(200).json(user);
-    } catch (error) {
-        return res.status(500).json({
-            message: "Internal server error"
-        })
-    }
    }
    
    static async getUsers (req,res){
-        try {
             const users = await auth_model.getUsers();
-            res.json(users);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
+            res.status(200).json(users);   
 }
 
    static async registerUser(req,res,role){
-    try {
         const { email, password } = req.body;
         const hashedPassword = await bcrypt.hash(password, saltrounds);
         const user = await auth_model.registerUser(email, hashedPassword , role);
         res.status(201).json(user);
-    } catch (error) {
-        if(error.message === "User with this email already exists") {
-            return res.status(409).json({ message: error.message });
-        }
-        
-      return console.error(error); // res.status(500).json({ error: error.message });
    }
-}
 
     static async login(req,res){
-        try {
             const { email, password } = req.body;
             await bcrypt.hash(password, saltrounds);
             const user = await auth_model.login(email, password);
@@ -62,21 +40,9 @@ export class auth_controller {
                 message : "Login successful",
                 accessToken: user.AccessToken,
             })
-        } catch (error) {
-            if(error.message === 'Invalid password' || error.message === 'User not found' || error.message === "User is inactive or blocked. Please contact support.") {
-                return res.status(400).json({
-                    status: "fail",
-                    message: error.message
-                })
-            }
-            return res.status(500).json({
-                status: "fail",
-                message: error.message
-            })
-        }
     }
 
-      static async update(req,res){
+     static async update(req,res){
         try {
             const { email,  new_password } = req.body;
             const user = await auth_model.update(email,  new_password);
@@ -102,7 +68,7 @@ export class auth_controller {
             message: error.message
         })
     }
-}
+}  
 
       static async refreshToken(req,res){
         // treat it as a login if i gets crendentials

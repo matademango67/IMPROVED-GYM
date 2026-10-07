@@ -1,10 +1,9 @@
 import {pool} from "../db/gym.js";
+import { ForbiddenError , UnauthorizedError , NotFoundError} from "./errors/ErrorsIndex.js";
 
 export const verifyAccess = async (req, res, next) => {
     if (!req.user) {
-        return res.status(401).json({
-            message: "Unauthorized"
-        });
+        throw new UnauthorizedError("Unauthorized")
     }
 
     const user_id = req.user.id;
@@ -15,15 +14,11 @@ export const verifyAccess = async (req, res, next) => {
     );
 
     if (access.rows.length === 0) {
-        return res.status(404).json({
-            message: "User not found"
-        });
+        throw new NotFoundError("User not found")
     }
 
     if (access.rows[0].status !== "active") {
-        return res.status(403).json({
-            message: "Access denied because your account is not active. Please contact the administrator."
-        });
+        throw new ForbiddenError("Access denied because your account is not active. Please contact the administrator.")
     }
 
     next();

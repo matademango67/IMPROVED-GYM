@@ -7,6 +7,7 @@ const { authRouter } = await import("./view/auth_router.js");
 const {MembershipRouter} = await import("./view/membership_router.js")
 const {PaymentRouter} = await import("./view/payment_router.js")
 const {AdminRouter} = await import("./view/admin_router.js")
+const {errorHandler} = await import("./middleware/ErrorHandler.js")
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/customer', gymRouter);
 app.use('/membership',MembershipRouter);
 app.use('/payments',PaymentRouter);
 app.use('/admin',AdminRouter);
+app.use(errorHandler);
 
 
 export default app;

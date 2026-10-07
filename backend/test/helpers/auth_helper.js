@@ -26,7 +26,6 @@ export function testAdminAuthorization(method, route) {
             expect(response.statusCode).toBe(401);
 
             expect(response.body).toEqual({
-                status: "fail",
                 message: "Access token required"
             });
         });
@@ -39,7 +38,6 @@ export function testAdminAuthorization(method, route) {
             expect(response.statusCode).toBe(401);
 
             expect(response.body).toEqual({
-                status: "fail",
                 message: "Invalid access token"
             });
         });
@@ -73,7 +71,6 @@ export function testUserAuthorization(method, route) {
             expect(response.statusCode).toBe(401);
 
             expect(response.body).toEqual({
-                status: "fail",
                 message: "Access token required"
             });
         });
@@ -86,7 +83,6 @@ export function testUserAuthorization(method, route) {
             expect(response.statusCode).toBe(401);
 
             expect(response.body).toEqual({
-                status: "fail",
                 message: "Invalid access token"
             });
         });

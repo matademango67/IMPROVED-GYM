@@ -6,13 +6,13 @@ export function verifyAccessToken(req, res, next) {
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            throw new UnauthorizedError("Access Token required");
+            throw new UnauthorizedError("Access token required");
         }
 
         const token = authHeader.split(" ")[1];
 
         if (!token) {
-    throw new UnauthorizedError("Access Token required");
+    throw new UnauthorizedError("Access token required");
 }
 
         const decoded = jwt.verify(
@@ -41,6 +41,6 @@ export function verifyAccessToken(req, res, next) {
             throw new UnauthorizedError("Token is expired");
         }
 
-        throw new UnauthorizedError("Invalid token");
+        throw new UnauthorizedError("Invalid access token");
     }
 }
